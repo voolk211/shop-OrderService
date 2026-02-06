@@ -31,13 +31,13 @@ public class Order extends Auditable implements Serializable {
     private Long id;
 
     @Column(name = "user_id", nullable = false)
-    private Long user_id;
+    private Long userId;
 
     @Column(name = "status", nullable = false)
     private String status;
 
     @Column(name = "total_price", nullable = false)
-    private BigDecimal total_price;
+    private BigDecimal totalPrice;
 
     @Column(name = "deleted", nullable = false)
     private Boolean deleted = false;
