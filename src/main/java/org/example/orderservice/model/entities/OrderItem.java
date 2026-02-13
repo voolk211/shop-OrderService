@@ -14,6 +14,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
+import java.util.Objects;
 
 @Entity
 @Table(name = "order_items")
@@ -36,5 +38,29 @@ public class OrderItem extends Auditable implements Serializable {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "item_id", nullable = false)
     private Item item;
+
+    @Column(name = "price_at_purchase", nullable = false)
+    private BigDecimal priceAtPurchase;
+
+    @Column(name = "item_name", nullable = false)
+    private String itemName;
+
+    @Override
+    public boolean equals(Object o){
+        if (this==o) return true;
+        if (o==null) return false;
+
+        if (org.hibernate.Hibernate.getClass(this) != org.hibernate.Hibernate.getClass(o)) {
+            return false;
+        }
+
+        OrderItem item = (OrderItem) o;
+        return id != null && id.equals(item.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
+    }
 
 }

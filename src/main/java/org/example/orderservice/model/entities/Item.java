@@ -36,18 +36,8 @@ public class Item extends Auditable implements Serializable {
     @Column(name = "price", nullable = false)
     private BigDecimal price;
 
-    @OneToMany(mappedBy = "item", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "item")
     private List<OrderItem> orderItems = new ArrayList<>();
-
-    public void addOrderItem(OrderItem orderItem){
-        orderItem.setItem(this);
-        orderItems.add(orderItem);
-    }
-
-    public void removeOrderItem(OrderItem orderItem){
-        orderItems.remove(orderItem);
-        orderItem.setItem(null);
-    }
 
 }
 
