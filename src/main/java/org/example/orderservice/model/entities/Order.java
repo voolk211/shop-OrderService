@@ -21,7 +21,6 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Table(name = "orders")
 @Entity
@@ -45,7 +44,7 @@ public class Order extends Auditable implements Serializable {
     private OrderStatus status;
 
     @Column(name = "total_price", nullable = false)
-    private BigDecimal totalPrice;
+    private BigDecimal totalPrice = BigDecimal.ZERO;
 
     @Column(name = "deleted", nullable = false)
     private boolean deleted = false;

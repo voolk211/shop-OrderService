@@ -11,9 +11,6 @@ public class OrderItemCreateDto {
     @PositiveOrZero(message = "Quantity must not be negative")
     private Integer quantity;
 
-    @NotNull(message = "Order id must not be null")
-    private Long orderId;
-
     @NotNull(message = "item id must not be null")
     private Long itemId;
 

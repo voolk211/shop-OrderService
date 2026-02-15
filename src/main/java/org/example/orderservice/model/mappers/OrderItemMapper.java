@@ -4,6 +4,7 @@ import org.example.orderservice.model.dto.OrderItemResponseDto;
 import org.example.orderservice.model.entities.OrderItem;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.springframework.data.domain.Page;
 
 import java.util.List;
 
@@ -14,4 +15,8 @@ public interface OrderItemMapper {
     OrderItemResponseDto toDto(OrderItem orderItem);
 
     List<OrderItemResponseDto> toDto(List<OrderItem> orderItems);
+
+    default Page<OrderItemResponseDto> toDto(Page<OrderItem> orderItems){
+        return orderItems.map(this::toDto);
+    }
 }

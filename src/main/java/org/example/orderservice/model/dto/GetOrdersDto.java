@@ -1,17 +1,17 @@
 package org.example.orderservice.model.dto;
 
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.PositiveOrZero;
 import lombok.Data;
 import org.example.orderservice.model.entities.OrderStatus;
 
-import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Data
-public class OrderCreateDto {
+public class GetOrdersDto {
 
-    @NotNull(message = "User id must not be null")
-    private Long userId;
+    private LocalDateTime from;
+
+    private LocalDateTime to;
 
     private OrderStatus status;
 

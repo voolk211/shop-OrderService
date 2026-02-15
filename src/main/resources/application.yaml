@@ -9,4 +9,14 @@ spring:
   liquibase:
     enabled: true
     change-log: classpath:liquibase/db.changelog.yaml
-
+user:
+  service:
+    url: ${USER_SERVICE_URL}
+resilience4j:
+  circuitbreaker:
+    instances:
+      user-service:
+        sliding-window-size: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state:
+          seconds: 10

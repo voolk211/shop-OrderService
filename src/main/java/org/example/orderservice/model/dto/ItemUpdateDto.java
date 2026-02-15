@@ -1,6 +1,5 @@
 package org.example.orderservice.model.dto;
 
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.PositiveOrZero;
 import lombok.Data;
 

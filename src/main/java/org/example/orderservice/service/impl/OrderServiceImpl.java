@@ -1,9 +1,12 @@
 package org.example.orderservice.service.impl;
 
 import lombok.RequiredArgsConstructor;
+import org.example.orderservice.client.UserClient;
 import org.example.orderservice.exception.ResourceNotFoundException;
 import org.example.orderservice.model.dto.OrderItemCreateDto;
 import org.example.orderservice.model.dto.OrderUpdateDto;
+import org.example.orderservice.model.dto.OrderWithUserResponseDto;
+import org.example.orderservice.model.dto.UserResponseDto;
 import org.example.orderservice.model.entities.Item;
 import org.example.orderservice.model.entities.Order;
 import org.example.orderservice.model.entities.OrderItem;
@@ -21,7 +24,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -32,45 +34,88 @@ public class OrderServiceImpl implements OrderService {
     private final ItemRepository itemRepository;
     private final OrderItemRepository orderItemRepository;
 
+    private final UserClient userClient;
+
     @Override
     @Transactional
-    public Order createOrder(Order order) {
+    public OrderWithUserResponseDto createOrder(Order order) {
         if (order.getId() != null && orderRepository.existsById(order.getId())) {
             throw new IllegalStateException("Order already exists.");
         }
-        return orderRepository.save(order);
+        Order createdOrder = orderRepository.save(order);
+        UserResponseDto user = userClient.getUserById(createdOrder.getUserId());
+
+        OrderWithUserResponseDto response = new OrderWithUserResponseDto();
+        response.setOrder(orderMapper.toDto(createdOrder));
+        response.setUser(user);
+
+        return response;
+
     }
 
     @Override
     @Transactional
-    public Order updateOrder(Long orderId, OrderUpdateDto orderUpdateDto) {
+    public OrderWithUserResponseDto updateOrder(Long orderId, OrderUpdateDto orderUpdateDto) {
         Order currentOrder = getActiveOrderOrThrow(orderId);
         orderMapper.updateOrderFromDto(orderUpdateDto, currentOrder);
-        return currentOrder;
+
+        UserResponseDto user = userClient.getUserById(currentOrder.getUserId());
+
+        OrderWithUserResponseDto response = new OrderWithUserResponseDto();
+        response.setOrder(orderMapper.toDto(currentOrder));
+        response.setUser(user);
+
+        return response;
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Order getOrder(Long orderId) {
-        return getActiveOrderOrThrow(orderId);
+    public OrderWithUserResponseDto  getOrder(Long orderId) {
+        Order order = getActiveOrderOrThrow(orderId);
+
+        UserResponseDto user = userClient.getUserById(order.getUserId());
+
+        OrderWithUserResponseDto response = new OrderWithUserResponseDto();
+        response.setOrder(orderMapper.toDto(order));
+        response.setUser(user);
+
+        return response;
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Page<Order> getOrders(Pageable pageable,
-                                 OrderStatus status,
-                                 LocalDateTime from,
-                                 LocalDateTime to) {
+    public Page<OrderWithUserResponseDto> getOrders(Pageable pageable,
+                                                    OrderStatus status,
+                                                    LocalDateTime from,
+                                                    LocalDateTime to) {
         Specification<Order> spec = Specification
                 .where(OrderSpecification.hasStatus(status))
                 .and(OrderSpecification.creationDateBetween(from, to));
-        return orderRepository.findAll(spec, pageable);
+
+        Page<Order> orders = orderRepository.findAll(spec, pageable);
+
+        return orders.map(order -> {
+            UserResponseDto user = userClient.getUserById(order.getUserId());
+            OrderWithUserResponseDto dto = new OrderWithUserResponseDto();
+            dto.setOrder(orderMapper.toDto(order));
+            dto.setUser(user);
+            return dto;
+        });
+
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<Order> getOrdersByUserId(Long userId) {
-        return orderRepository.findOrdersByUserId(userId);
+    public Page<OrderWithUserResponseDto> getOrdersByUserId(Long userId, Pageable pageable) {
+        Page<Order> orders = orderRepository.findOrdersByUserId(userId, pageable);
+
+        return orders.map(order -> {
+            UserResponseDto user = userClient.getUserById(order.getUserId());
+            OrderWithUserResponseDto dto = new OrderWithUserResponseDto();
+            dto.setOrder(orderMapper.toDto(order));
+            dto.setUser(user);
+            return dto;
+        });
     }
 
     @Override
@@ -82,9 +127,9 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional
-    public OrderItem addOrderItem(OrderItemCreateDto orderItemCreateDto){
+    public OrderItem addOrderItem(Long orderId, OrderItemCreateDto orderItemCreateDto){
 
-        Order order = getActiveOrderOrThrow(orderItemCreateDto.getOrderId());
+        Order order = getActiveOrderOrThrow(orderId);
 
         Item item = itemRepository.findById(orderItemCreateDto.getItemId())
                 .orElseThrow(() -> new ResourceNotFoundException("Item not found"));

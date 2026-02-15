@@ -1,7 +1,10 @@
 package org.example.orderservice.controller;
 
 import jakarta.validation.ConstraintViolationException;
+import org.example.orderservice.exception.DeletedOrderException;
 import org.example.orderservice.exception.ExceptionBody;
+import org.example.orderservice.exception.ItemInUseException;
+import org.example.orderservice.exception.ResourceNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -15,6 +18,24 @@ import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class ControllerAdvice {
+
+
+
+    @ExceptionHandler(DeletedOrderException.class)
+    public ResponseEntity<ExceptionBody> handleDeletedOrder(DeletedOrderException e){
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ExceptionBody(e.getMessage()));
+    }
+
+
+    @ExceptionHandler(ItemInUseException.class)
+    public ResponseEntity<ExceptionBody> handleItemInUse(ItemInUseException e){
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ExceptionBody(e.getMessage()));
+    }
+
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<ExceptionBody> handleResourceNotFound(ResourceNotFoundException e){
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ExceptionBody(e.getMessage()));
+    }
 
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<ExceptionBody> handleIllegalState(IllegalStateException e){

@@ -7,6 +7,7 @@ import org.example.orderservice.model.entities.Order;
 import org.mapstruct.Mapper;
 import org.mapstruct.MappingTarget;
 import org.mapstruct.NullValuePropertyMappingStrategy;
+import org.springframework.data.domain.Page;
 
 import java.util.List;
 
@@ -16,8 +17,6 @@ public interface OrderMapper {
     Order toEntity(OrderCreateDto orderDto);
 
     OrderResponseDto toDto(Order order);
-
-    List<OrderResponseDto> toDto(List<Order> orders);
 
     void updateOrderFromDto(OrderUpdateDto source, @MappingTarget Order target);
 
