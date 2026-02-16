@@ -2,7 +2,12 @@ package org.example.orderservice.integration;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.client.WireMock;
-import org.example.orderservice.model.dto.*;
+
+import org.example.orderservice.model.dto.OrderCreateDto;
+import org.example.orderservice.model.dto.OrderItemCreateDto;
+import org.example.orderservice.model.dto.OrderItemResponseDto;
+import org.example.orderservice.model.dto.OrderUpdateDto;
+import org.example.orderservice.model.dto.OrderWithUserResponseDto;
 import org.example.orderservice.model.entities.Item;
 import org.example.orderservice.repository.ItemRepository;
 import org.example.orderservice.repository.OrderItemRepository;

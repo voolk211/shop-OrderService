@@ -16,4 +16,5 @@ public class ItemCreateDto {
     @NotNull(message = "Price must not be null")
     @PositiveOrZero(message = "Price must not be negative")
     private BigDecimal price;
+
 }

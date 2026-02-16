@@ -21,6 +21,10 @@ jobs:
         with:
           java-version: 21
           distribution: 'zulu' # Alternative distribution options are available.
+      - name: Start Docker
+        run: |
+          sudo systemctl start docker
+          docker version
       - name: Cache SonarQube packages
         uses: actions/cache@v4
         with:

@@ -3,9 +3,13 @@ package org.example.orderservice.unit;
 
 import org.example.orderservice.client.UserClient;
 import org.example.orderservice.exception.ResourceNotFoundException;
-import org.example.orderservice.model.dto.*;
-import org.example.orderservice.model.entities.OrderStatus;
+import org.example.orderservice.model.dto.OrderItemCreateDto;
+import org.example.orderservice.model.dto.OrderResponseDto;
+import org.example.orderservice.model.dto.OrderUpdateDto;
+import org.example.orderservice.model.dto.OrderWithUserResponseDto;
+import org.example.orderservice.model.dto.UserResponseDto;
 import org.example.orderservice.model.entities.Item;
+import org.example.orderservice.model.entities.OrderStatus;
 import org.example.orderservice.model.entities.Order;
 import org.example.orderservice.model.entities.OrderItem;
 import org.example.orderservice.model.mappers.OrderMapper;

@@ -1,6 +1,7 @@
 package org.example.orderservice.unit;
 
 import org.example.orderservice.exception.ItemInUseException;
+import org.example.orderservice.model.dto.ItemUpdateDto;
 import org.example.orderservice.model.mappers.ItemMapper;
 import org.example.orderservice.repository.ItemRepository;
 import org.example.orderservice.repository.OrderItemRepository;
@@ -10,7 +11,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.example.orderservice.exception.ResourceNotFoundException;
-import org.example.orderservice.model.dto.*;
+
 import org.example.orderservice.model.entities.Item;
 import org.mockito.InjectMocks;
 import java.math.BigDecimal;

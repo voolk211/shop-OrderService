@@ -3,7 +3,6 @@ package org.example.orderservice.exception;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
-import java.util.HashMap;
 import java.util.Map;
 
 @Data
