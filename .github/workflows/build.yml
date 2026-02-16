@@ -21,19 +21,6 @@ jobs:
         with:
           java-version: 21
           distribution: 'zulu' # Alternative distribution options are available.
-      - name: Install latest Docker
-        run: |
-          sudo apt-get update
-          sudo apt-get remove -y docker docker-engine docker.io containerd runc || true
-          sudo apt-get install -y ca-certificates curl gnupg lsb-release
-          sudo mkdir -p /etc/apt/keyrings
-          curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-          echo \
-            "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
-            $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-          sudo apt-get update
-          sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-          docker --version
       - name: Cache SonarQube packages
         uses: actions/cache@v4
         with:
@@ -47,7 +34,9 @@ jobs:
           key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
           restore-keys: ${{ runner.os }}-m2
       - name: Setup Testcontainers
-        run: echo "TESTCONTAINERS_RYUK_DISABLED=true" >> $GITHUB_ENV
+        run: |
+          echo "TESTCONTAINERS_RYUK_DISABLED=true" >> $GITHUB_ENV
+          echo "DOCKER_HOST=unix:///var/run/docker.sock" >> $GITHUB_ENV
       - name: Build, test and run SonarCloud analysis
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
