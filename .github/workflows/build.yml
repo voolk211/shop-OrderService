@@ -11,6 +11,14 @@ jobs:
   build:
     name: Build, Test, Analyze and Build Docker Image
     runs-on: ubuntu-latest
+    services:
+      docker:
+        image: docker:24-dind
+        options: --privileged
+        ports:
+          - 2375:2375
+        env:
+          DOCKER_TLS_CERTDIR: ""
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -21,9 +29,10 @@ jobs:
         with:
           java-version: 21
           distribution: 'zulu' # Alternative distribution options are available.
-      - name: Start Docker
+      - name: Wait for Docker
         run: |
-          sudo systemctl start docker
+          echo "Waiting for Docker..."
+          until docker info >/dev/null 2>&1; do sleep 1; done
           docker version
       - name: Cache SonarQube packages
         uses: actions/cache@v4
@@ -40,6 +49,9 @@ jobs:
       - name: Build, test and run SonarCloud analysis
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          DOCKER_HOST: tcp://localhost:2375
         run: mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=voolk211_shop-OrderService
       - name: Build Docker image
+        env:
+          DOCKER_HOST: tcp://localhost:2375
         run: docker build -t order-service:${{ github.sha }} .
