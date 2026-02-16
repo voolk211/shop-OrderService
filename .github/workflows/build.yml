@@ -35,11 +35,14 @@ jobs:
           restore-keys: ${{ runner.os }}-m2
       - name: Setup Testcontainers
         run: |
+          echo "DOCKER_API_VERSION=1.44" >> $GITHUB_ENV
           echo "TESTCONTAINERS_RYUK_DISABLED=true" >> $GITHUB_ENV
           echo "DOCKER_HOST=unix:///var/run/docker.sock" >> $GITHUB_ENV
+
       - name: Build, test and run SonarCloud analysis
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          DOCKER_API_VERSION: '1.44'
         run: mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=voolk211_shop-OrderService
       - name: Build Docker image
         run: docker build -t order-service:${{ github.sha }} .
