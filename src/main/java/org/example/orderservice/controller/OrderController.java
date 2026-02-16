@@ -83,4 +83,10 @@ public class OrderController {
         return ResponseEntity.noContent().build();
     }
 
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<Page<OrderWithUserResponseDto>> getOrdersByUserId(@PathVariable Long userId, Pageable pageable) {
+        Page<OrderWithUserResponseDto> orders = orderService.getOrdersByUserId(userId, pageable);
+        return ResponseEntity.ok(orders);
+    }
+
 }

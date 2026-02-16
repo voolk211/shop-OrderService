@@ -29,7 +29,7 @@ public class ControllerAdvice {
 
     @ExceptionHandler(ItemInUseException.class)
     public ResponseEntity<ExceptionBody> handleItemInUse(ItemInUseException e){
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ExceptionBody(e.getMessage()));
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(new ExceptionBody(e.getMessage()));
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)

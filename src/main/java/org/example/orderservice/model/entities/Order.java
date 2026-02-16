@@ -68,7 +68,7 @@ public class Order extends Auditable implements Serializable {
 
     public void recalculateTotalPrice(){
         totalPrice = orderItems.stream()
-                   .map(orderItem -> orderItem.getItem().getPrice()
+                   .map(orderItem -> orderItem.getPriceAtPurchase()
                            .multiply(BigDecimal.valueOf(orderItem.getQuantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }

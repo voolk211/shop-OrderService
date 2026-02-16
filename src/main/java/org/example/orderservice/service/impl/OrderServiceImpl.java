@@ -141,7 +141,10 @@ public class OrderServiceImpl implements OrderService {
         orderItem.setItemName(item.getName());
         order.addOrderItem(orderItem);
 
+        orderItemRepository.save(orderItem);
+
         orderRepository.save(order);
+
         return orderItem;
     }
 

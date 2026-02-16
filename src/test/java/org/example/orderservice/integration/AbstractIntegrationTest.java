@@ -21,7 +21,6 @@ public class AbstractIntegrationTest {
                     .withUsername("test")
                     .withPassword("test");
 
-
     @Container
     static GenericContainer<?> wiremock =
             new GenericContainer<>("wiremock/wiremock:3.5.4")
@@ -32,7 +31,11 @@ public class AbstractIntegrationTest {
         registry.add("spring.datasource.url", postgres::getJdbcUrl);
         registry.add("spring.datasource.username", postgres::getUsername);
         registry.add("spring.datasource.password", postgres::getPassword);
-        registry.add("user.service.url", () ->
-                "http://" + wiremock.getHost() + ":" + wiremock.getMappedPort(8080));
+        registry.add("user.service.url", AbstractIntegrationTest::wiremockBaseUrl);
     }
+
+    protected static String wiremockBaseUrl() {
+        return "http://" + wiremock.getHost() + ":" + wiremock.getMappedPort(8080);
+    }
+
 }
