@@ -11,6 +11,10 @@ jobs:
   build:
     name: Build, Test, Analyze and Build Docker Image
     runs-on: ubuntu-latest
+    services:
+      docker:
+        image: docker:24.0.5
+        options: --privileged
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -38,9 +42,7 @@ jobs:
           key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
           restore-keys: ${{ runner.os }}-m2
       - name: Setup Testcontainers
-        run: |
-            echo "TESTCONTAINERS_RYUK_DISABLED=true" >> $GITHUB_ENV
-            echo "DOCKER_HOST=unix:///var/run/docker.sock" >> $GITHUB_ENV
+        run: echo "TESTCONTAINERS_RYUK_DISABLED=true" >> $GITHUB_ENV
       - name: Build, test and run SonarCloud analysis
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
