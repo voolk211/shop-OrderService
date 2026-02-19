@@ -2,7 +2,9 @@ package org.example.orderservice.client.fallback;
 
 import org.example.orderservice.client.UserClient;
 import org.example.orderservice.model.dto.UserResponseDto;
+import org.springframework.stereotype.Component;
 
+@Component
 public class UserClientFallback implements UserClient {
 
     @Override

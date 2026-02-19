@@ -39,9 +39,6 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderWithUserResponseDto createOrder(Order order) {
-        if (order.getId() != null && orderRepository.existsById(order.getId())) {
-            throw new IllegalStateException("Order already exists.");
-        }
         Order createdOrder = orderRepository.save(order);
         UserResponseDto user = userClient.getUserById(createdOrder.getUserId());
 
@@ -85,29 +82,16 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional(readOnly = true)
     public Page<OrderWithUserResponseDto> getOrders(Pageable pageable,
+                                                    Long userId,
                                                     OrderStatus status,
                                                     LocalDateTime from,
                                                     LocalDateTime to) {
         Specification<Order> spec = Specification
-                .where(OrderSpecification.hasStatus(status))
+                .where(OrderSpecification.belongsToUser(userId))
+                .and(OrderSpecification.hasStatus(status))
                 .and(OrderSpecification.creationDateBetween(from, to));
 
         Page<Order> orders = orderRepository.findAll(spec, pageable);
-
-        return orders.map(order -> {
-            UserResponseDto user = userClient.getUserById(order.getUserId());
-            OrderWithUserResponseDto dto = new OrderWithUserResponseDto();
-            dto.setOrder(orderMapper.toDto(order));
-            dto.setUser(user);
-            return dto;
-        });
-
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public Page<OrderWithUserResponseDto> getOrdersByUserId(Long userId, Pageable pageable) {
-        Page<Order> orders = orderRepository.findOrdersByUserId(userId, pageable);
 
         return orders.map(order -> {
             UserResponseDto user = userClient.getUserById(order.getUserId());
@@ -139,12 +123,8 @@ public class OrderServiceImpl implements OrderService {
         orderItem.setQuantity(orderItemCreateDto.getQuantity());
         orderItem.setPriceAtPurchase(item.getPrice());
         orderItem.setItemName(item.getName());
+
         order.addOrderItem(orderItem);
-
-        orderItemRepository.save(orderItem);
-
-        orderRepository.save(order);
-
         return orderItem;
     }
 
@@ -157,12 +137,15 @@ public class OrderServiceImpl implements OrderService {
 
     @Transactional
     @Override
-    public void deleteOrderItem(Long id) {
-        OrderItem orderItem = orderItemRepository.findById(id)
+    public void deleteOrderItem(Long orderId, Long orderItemId) {
+        OrderItem orderItem = orderItemRepository.findById(orderItemId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order item not found"));
 
-        Order order = getActiveOrderOrThrow(orderItem.getOrder().getId());
+        if (!orderItem.getOrder().getId().equals(orderId)) {
+            throw new IllegalArgumentException("Order item does not belong to the specified order");
+        }
 
+        Order order = getActiveOrderOrThrow(orderId);
         order.removeOrderItem(orderItem);
     }
 

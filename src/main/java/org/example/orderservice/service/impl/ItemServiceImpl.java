@@ -23,9 +23,6 @@ public class ItemServiceImpl implements ItemService {
     @Transactional
     @Override
     public Item createItem(Item item) {
-        if (item.getId() != null && itemRepository.existsById(item.getId())) {
-            throw new IllegalStateException("Item already exists.");
-        }
         return itemRepository.save(item);
     }
 

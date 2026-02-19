@@ -10,6 +10,15 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 public class OrderSpecification {
 
+    public static Specification<Order> belongsToUser(Long userId) {
+        return (root, query, criteriaBuilder) -> {
+            if (userId == null) {
+                return criteriaBuilder.conjunction();
+            }
+            return criteriaBuilder.equal(root.get("userId"), userId);
+        };
+    }
+
     public static Specification<Order> hasStatus(OrderStatus status) {
         return (root, query, criteriaBuilder) -> {
             if (status == null) {

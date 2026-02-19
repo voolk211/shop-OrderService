@@ -1,7 +1,6 @@
 package org.example.orderservice.controller;
 
 import jakarta.validation.ConstraintViolationException;
-import org.example.orderservice.exception.DeletedOrderException;
 import org.example.orderservice.exception.ExceptionBody;
 import org.example.orderservice.exception.ItemInUseException;
 import org.example.orderservice.exception.ResourceNotFoundException;
@@ -18,14 +17,6 @@ import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class ControllerAdvice {
-
-
-
-    @ExceptionHandler(DeletedOrderException.class)
-    public ResponseEntity<ExceptionBody> handleDeletedOrder(DeletedOrderException e){
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ExceptionBody(e.getMessage()));
-    }
-
 
     @ExceptionHandler(ItemInUseException.class)
     public ResponseEntity<ExceptionBody> handleItemInUse(ItemInUseException e){

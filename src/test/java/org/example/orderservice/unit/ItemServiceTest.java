@@ -38,18 +38,6 @@ class ItemServiceTest {
     private ItemServiceImpl itemService;
 
     @Test
-    void createItem_WhenItemAlreadyExists_ThrowsIllegalStateException() {
-        Item item = new Item();
-        item.setId(1L);
-
-        when(itemRepository.existsById(1L)).thenReturn(true);
-
-        assertThatThrownBy(() -> itemService.createItem(item))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessage("Item already exists.");
-    }
-
-    @Test
     void createItem_WhenItemIsValid_ReturnsSavedItem() {
         Item item = new Item();
         item.setName("Laptop");

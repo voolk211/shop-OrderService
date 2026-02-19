@@ -20,17 +20,16 @@ public interface OrderService {
     OrderWithUserResponseDto getOrder(Long orderId);
 
     Page<OrderWithUserResponseDto> getOrders(Pageable pageable,
+                                 Long userId,
                                  OrderStatus status,
                                  LocalDateTime from,
                                  LocalDateTime to);
-
-    Page<OrderWithUserResponseDto> getOrdersByUserId(Long userId, Pageable pageable);
 
     OrderItem addOrderItem(Long orderId, OrderItemCreateDto orderItemCreateDto);
 
     Page<OrderItem> getOrderItems(Long orderId, Pageable pageable);
 
-    void deleteOrderItem(Long id);
+    void deleteOrderItem(Long orderId, Long orderItemId);
 
     void deleteOrder(Long id);
 }

@@ -45,11 +45,12 @@ public class OrderController {
 
     @GetMapping
     public ResponseEntity<Page<OrderWithUserResponseDto>> getOrders(
+            @RequestParam(required = false) Long userId,
             @RequestParam(required = false) OrderStatus orderStatus,
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) @RequestParam(required = false) LocalDateTime from,
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) @RequestParam(required = false) LocalDateTime to,
             Pageable pageable) {
-        Page<OrderWithUserResponseDto> orders = orderService.getOrders(pageable, orderStatus, from, to);
+        Page<OrderWithUserResponseDto> orders = orderService.getOrders(pageable, userId, orderStatus, from, to);
         return ResponseEntity.ok(orders);
     }
 
@@ -77,16 +78,9 @@ public class OrderController {
         return ResponseEntity.noContent().build();
     }
 
-    @DeleteMapping("/items/{orderItemId}")
-    public ResponseEntity<Void> deleteOrderItem(@PathVariable Long orderItemId) {
-        orderService.deleteOrderItem(orderItemId);
+    @DeleteMapping("/{orderId}/items/{orderItemId}")
+    public ResponseEntity<Void> deleteOrderItem(@PathVariable Long orderId, @PathVariable Long orderItemId) {
+        orderService.deleteOrderItem(orderId, orderItemId);
         return ResponseEntity.noContent().build();
     }
-
-    @GetMapping("/user/{userId}")
-    public ResponseEntity<Page<OrderWithUserResponseDto>> getOrdersByUserId(@PathVariable Long userId, Pageable pageable) {
-        Page<OrderWithUserResponseDto> orders = orderService.getOrdersByUserId(userId, pageable);
-        return ResponseEntity.ok(orders);
-    }
-
 }

@@ -257,7 +257,7 @@ public class OrderControllerIntegrationTest extends AbstractIntegrationTest{
         OrderItemResponseDto orderItem =
                 objectMapper.readValue(response, OrderItemResponseDto.class);
 
-        mockMvc.perform(delete("/api/orders/items/{id}", orderItem.getId())
+        mockMvc.perform(delete("/api/orders/{orderId}/items/{orderItemId}", order.getOrder().getId() ,orderItem.getId())
                         .with(csrf()))
                 .andExpect(status().isNoContent());
     }
@@ -376,7 +376,7 @@ public class OrderControllerIntegrationTest extends AbstractIntegrationTest{
         OrderItemResponseDto orderItem =
                 objectMapper.readValue(response, OrderItemResponseDto.class);
 
-        mockMvc.perform(delete("/api/orders/items/{id}", orderItem.getId())
+        mockMvc.perform(delete("/api/orders/{orderId}/items/{orderItemId}", order.getOrder().getId() ,orderItem.getId())
                         .with(csrf()))
                 .andExpect(status().isNoContent());
 
@@ -402,9 +402,10 @@ public class OrderControllerIntegrationTest extends AbstractIntegrationTest{
         createOrder(50L);
         createOrder(50L);
 
-        mockMvc.perform(get("/api/orders/user/{userId}", 50L)
+        mockMvc.perform(get("/api/orders")
                         .param("page", "0")
-                        .param("size", "10"))
+                        .param("size", "10")
+                        .param("userId", "50"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content").isArray())
                 .andExpect(jsonPath("$.content.length()").value(2));
@@ -414,9 +415,10 @@ public class OrderControllerIntegrationTest extends AbstractIntegrationTest{
     @WithMockUser(roles = "USER")
     void shouldReturnEmptyPageWhenUserHasNoOrders() throws Exception {
 
-        mockMvc.perform(get("/api/orders/user/{userId}", 777L)
+        mockMvc.perform(get("/api/orders")
                         .param("page", "0")
-                        .param("size", "10"))
+                        .param("size", "10")
+                        .param("userId", "777"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content").isEmpty());
     }
@@ -429,9 +431,10 @@ public class OrderControllerIntegrationTest extends AbstractIntegrationTest{
             createOrder(60L);
         }
 
-        mockMvc.perform(get("/api/orders/user/{userId}", 60L)
+        mockMvc.perform(get("/api/orders")
                         .param("page", "0")
-                        .param("size", "3"))
+                        .param("size", "3")
+                        .param("userId", "60"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content.length()").value(3));
     }

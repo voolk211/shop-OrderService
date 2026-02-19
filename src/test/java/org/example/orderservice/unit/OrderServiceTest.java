@@ -36,8 +36,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 public class OrderServiceTest {
@@ -59,19 +58,6 @@ public class OrderServiceTest {
 
     @InjectMocks
     OrderServiceImpl orderService;
-
-    @Test
-    void createOrder_WhenOrderAlreadyExists_ShouldThrowException() {
-
-        Order order = new Order();
-        order.setId(1L);
-
-        when(orderRepository.existsById(1L)).thenReturn(true);
-
-        assertThatThrownBy(() -> orderService.createOrder(order))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessage("Order already exists.");
-    }
 
     @Test
     void createOrder_WhenValid_ShouldReturnOrderWithUser() {
@@ -213,7 +199,6 @@ public class OrderServiceTest {
 
         OrderItem result = orderService.addOrderItem(1L, dto);
 
-        verify(orderRepository).save(order);
         assertThat(result.getItem()).isEqualTo(item);
         assertThat(result.getQuantity()).isEqualTo(3);
     }
@@ -240,9 +225,25 @@ public class OrderServiceTest {
 
         when(orderItemRepository.findById(1L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> orderService.deleteOrderItem(1L))
+        assertThatThrownBy(() -> orderService.deleteOrderItem(1L, 1L))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessage("Order item not found");
+    }
+
+    @Test
+    void deleteOrderItem_WhenOrderItemDoesNotBelongToOrder_ShouldThrowException() {
+
+        Order order = new Order();
+        order.setId(1L);
+
+        OrderItem orderItem = new OrderItem();
+        orderItem.setOrder(order);
+
+        when(orderItemRepository.findById(1L)).thenReturn(Optional.of(orderItem));
+
+        assertThatThrownBy(() -> orderService.deleteOrderItem(2L, 1L))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Order item does not belong to the specified order");
     }
 
     @Test
@@ -257,7 +258,7 @@ public class OrderServiceTest {
         when(orderItemRepository.findById(2L)).thenReturn(Optional.of(orderItem));
         when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
 
-        orderService.deleteOrderItem(2L);
+        orderService.deleteOrderItem(1L, 2L);
 
         assertThat(orderItem.getOrder()).isNull();
     }
@@ -295,7 +296,7 @@ public class OrderServiceTest {
         when(userClient.getUserById(20L)).thenReturn(user2);
 
         Page<OrderWithUserResponseDto> result =
-                orderService.getOrders(pageable, OrderStatus.SHIPPED, from, to);
+                orderService.getOrders(pageable, null, OrderStatus.SHIPPED, from, to);
 
         assertThat(result.getContent()).hasSize(2);
 
@@ -317,62 +318,7 @@ public class OrderServiceTest {
                 .thenReturn(Page.empty());
 
         Page<OrderWithUserResponseDto> result =
-                orderService.getOrders(pageable, null, null, null);
-
-        assertThat(result.getContent()).isEmpty();
-    }
-
-    @Test
-    void getOrdersByUserId_WhenOrdersExist_ShouldReturnMappedPage() {
-
-        Long userId = 5L;
-        Pageable pageable = PageRequest.of(0, 3);
-
-        Order order1 = new Order();
-        order1.setId(1L);
-        order1.setUserId(userId);
-
-        Order order2 = new Order();
-        order2.setId(2L);
-        order2.setUserId(userId);
-
-        Page<Order> orderPage = new PageImpl<>(List.of(order1, order2));
-
-        OrderResponseDto dto1 = new OrderResponseDto();
-        OrderResponseDto dto2 = new OrderResponseDto();
-
-        UserResponseDto userDto = new UserResponseDto();
-
-        when(orderRepository.findOrdersByUserId(userId, pageable))
-                .thenReturn(orderPage);
-
-        when(orderMapper.toDto(order1)).thenReturn(dto1);
-        when(orderMapper.toDto(order2)).thenReturn(dto2);
-
-        when(userClient.getUserById(userId)).thenReturn(userDto);
-
-        Page<OrderWithUserResponseDto> result =
-                orderService.getOrdersByUserId(userId, pageable);
-
-        assertThat(result.getContent()).hasSize(2);
-
-        assertThat(result.getContent().getFirst().getOrder()).isEqualTo(dto1);
-        assertThat(result.getContent().getFirst().getUser()).isEqualTo(userDto);
-
-        verify(orderRepository).findOrdersByUserId(userId, pageable);
-    }
-
-    @Test
-    void getOrdersByUserId_WhenNoOrders_ShouldReturnEmptyPage() {
-
-        Long userId = 9L;
-        Pageable pageable = PageRequest.of(0, 3);
-
-        when(orderRepository.findOrdersByUserId(userId, pageable))
-                .thenReturn(Page.empty());
-
-        Page<OrderWithUserResponseDto> result =
-                orderService.getOrdersByUserId(userId, pageable);
+                orderService.getOrders(pageable,null, null, null, null);
 
         assertThat(result.getContent()).isEmpty();
     }
@@ -409,7 +355,7 @@ public class OrderServiceTest {
         when(userClient.getUserById(10L)).thenReturn(userDto);
 
         Page<OrderWithUserResponseDto> result =
-                orderService.getOrders(pageable, OrderStatus.PAID, from, to);
+                orderService.getOrders(pageable, null, OrderStatus.PAID, from, to);
 
         assertThat(result).isNotNull();
         assertThat(result.getContent()).hasSize(1);
@@ -423,6 +369,79 @@ public class OrderServiceTest {
         verify(orderRepository).findAll(any(Specification.class), eq(pageable));
         verify(userClient).getUserById(10L);
     }
+
+    @Test
+    void getOrders_WhenFilteredByUserId_ShouldReturnOrdersWithCorrectUserId() {
+
+        Pageable pageable = PageRequest.of(0, 2);
+        LocalDateTime from = LocalDateTime.now().minusDays(2);
+        LocalDateTime to = LocalDateTime.now();
+
+        Order order1 = new Order();
+        order1.setId(1L);
+        order1.setUserId(10L);
+        order1.setStatus(OrderStatus.PAID);
+        order1.setTotalPrice(BigDecimal.valueOf(100));
+
+        Order order2 = new Order();
+        order2.setId(2L);
+        order2.setUserId(10L);
+        order2.setStatus(OrderStatus.PAID);
+        order2.setTotalPrice(BigDecimal.valueOf(100));
+
+        Page<Order> orderPage = new PageImpl<>(List.of(order1, order2));
+
+        OrderResponseDto orderDto1 = new OrderResponseDto();
+        orderDto1.setId(1L);
+        orderDto1.setUserId(10L);
+        orderDto1.setStatus(OrderStatus.PAID);
+        orderDto1.setTotalPrice(BigDecimal.valueOf(100));
+
+        OrderResponseDto orderDto2 = new OrderResponseDto();
+        orderDto2.setId(2L);
+        orderDto2.setUserId(10L);
+        orderDto2.setStatus(OrderStatus.PAID);
+        orderDto2.setTotalPrice(BigDecimal.valueOf(100));
+
+        UserResponseDto userDto = new UserResponseDto();
+        userDto.setId(10L);
+        userDto.setEmail("user@test.com");
+
+        when(orderRepository.findAll(any(Specification.class), eq(pageable)))
+                .thenReturn(orderPage);
+
+        when(orderMapper.toDto(any(Order.class)))
+                .thenAnswer(invocation -> {
+                    Order o = invocation.getArgument(0);
+                    OrderResponseDto dto = new OrderResponseDto();
+                    dto.setId(o.getId());
+                    dto.setUserId(o.getUserId());
+                    dto.setStatus(o.getStatus());
+                    dto.setTotalPrice(o.getTotalPrice());
+                    return dto;
+                });
+
+        when(userClient.getUserById(10L)).thenReturn(userDto);
+
+        Page<OrderWithUserResponseDto> result =
+                orderService.getOrders(pageable, 10L, OrderStatus.PAID, from, to);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getContent()).hasSize(2);
+
+        List<Long> orderIds = result.getContent().stream()
+                .map(r -> r.getOrder().getId())
+                .toList();
+
+        assertThat(orderIds).containsExactlyInAnyOrder(1L, 2L);
+
+        assertThat(result.getContent())
+                .allSatisfy(r -> assertThat(r.getUser().getId()).isEqualTo(10L));
+
+        verify(orderRepository).findAll(any(Specification.class), eq(pageable));
+        verify(userClient, times(2)).getUserById(10L);
+    }
+
 
     @Test
     void getOrders_WhenFiltersAreNull_ShouldReturnOrders() {
@@ -451,7 +470,7 @@ public class OrderServiceTest {
         when(userClient.getUserById(15L)).thenReturn(userDto);
 
         Page<OrderWithUserResponseDto> result =
-                orderService.getOrders(pageable, null, null, null);
+                orderService.getOrders(pageable, null, null, null, null);
 
         assertThat(result.getContent()).hasSize(1);
         assertThat(result.getContent().get(0).getOrder().getStatus())
