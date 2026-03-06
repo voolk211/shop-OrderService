@@ -1,14 +1,16 @@
 package org.example.orderservice.specification;
 
-import lombok.NoArgsConstructor;
 import org.example.orderservice.model.entities.Order;
 import org.example.orderservice.model.entities.OrderStatus;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.time.LocalDateTime;
 
-@NoArgsConstructor
 public class OrderSpecification {
+
+    private OrderSpecification() {
+        throw new UnsupportedOperationException("Utility class cannot be instantiated");
+    }
 
     public static Specification<Order> belongsToUser(Long userId) {
         return (root, query, criteriaBuilder) -> {

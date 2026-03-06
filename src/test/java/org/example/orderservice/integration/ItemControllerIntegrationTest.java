@@ -26,7 +26,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 
 
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
-@TestPropertySource(properties = {"internal.internal-secret=test-secret"})
+@TestPropertySource(properties = {
+        "user.service.url=http://localhost:8080",
+        "internal.internal-secret=test-secret"
+})
 public class ItemControllerIntegrationTest extends AbstractIntegrationTest{
 
     @Autowired
