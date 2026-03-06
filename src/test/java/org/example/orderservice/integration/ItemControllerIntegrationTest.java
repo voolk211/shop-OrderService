@@ -5,11 +5,14 @@ import org.example.orderservice.model.dto.ItemResponseDto;
 import org.example.orderservice.model.dto.ItemUpdateDto;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 import java.math.BigDecimal;
 
@@ -23,6 +26,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 
 
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
+@TestPropertySource(properties = {"internal.internal-secret=test-secret"})
 public class ItemControllerIntegrationTest extends AbstractIntegrationTest{
 
     @Autowired
@@ -31,6 +35,9 @@ public class ItemControllerIntegrationTest extends AbstractIntegrationTest{
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Value("${internal.internal-secret}")
+    private String internalSecret;
+
     private ItemCreateDto validItem(String name, BigDecimal price) {
         ItemCreateDto dto = new ItemCreateDto();
         dto.setName(name);
@@ -38,9 +45,19 @@ public class ItemControllerIntegrationTest extends AbstractIntegrationTest{
         return dto;
     }
 
+    private RequestPostProcessor withUserHeaders(Long userId, String... roles) {
+        return request -> {
+            request.addHeader("X-User-Id", userId.toString());
+            request.addHeader("X-Roles", "ROLE_" + String.join(",ROLE_", roles));
+            request.addHeader("X-Internal-Auth", internalSecret);
+            return request;
+        };
+    }
+
     private ItemResponseDto createItem(String name, BigDecimal price) throws Exception {
         String response = mockMvc.perform(post("/api/items")
                         .with(csrf())
+                        .with(withUserHeaders(1L, "ADMIN"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(validItem(name, price))))
                 .andExpect(status().isCreated())
@@ -52,10 +69,11 @@ public class ItemControllerIntegrationTest extends AbstractIntegrationTest{
     }
 
     @Test
-    @WithMockUser(roles = "USER")
+    @WithMockUser(roles = "ADMIN")
     void shouldCreateItem() throws Exception {
         mockMvc.perform(post("/api/items")
                         .with(csrf())
+                        .with(withUserHeaders(1L, "ADMIN"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
                                 validItem("Laptop", BigDecimal.valueOf(1500)))))
@@ -66,11 +84,12 @@ public class ItemControllerIntegrationTest extends AbstractIntegrationTest{
     }
 
     @Test
-    @WithMockUser(roles = "USER")
+    @WithMockUser(roles = "ADMIN")
     void shouldReturnItemById() throws Exception {
         ItemResponseDto created = createItem("Phone", BigDecimal.valueOf(800));
 
-        mockMvc.perform(get("/api/items/{id}", created.getId()))
+        mockMvc.perform(get("/api/items/{id}", created.getId())
+                        .with(withUserHeaders(1L, "ADMIN")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(created.getId()))
                 .andExpect(jsonPath("$.name").value("Phone"))
@@ -78,7 +97,7 @@ public class ItemControllerIntegrationTest extends AbstractIntegrationTest{
     }
 
     @Test
-    @WithMockUser(roles = "USER")
+    @WithMockUser(roles = "ADMIN")
     void shouldUpdateItem() throws Exception {
         ItemResponseDto created = createItem("Tablet", BigDecimal.valueOf(600));
 
@@ -88,6 +107,7 @@ public class ItemControllerIntegrationTest extends AbstractIntegrationTest{
 
         mockMvc.perform(put("/api/items/{id}", created.getId())
                         .with(csrf())
+                        .with(withUserHeaders(1L, "ADMIN"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateDto)))
                 .andExpect(status().isOk())
@@ -97,27 +117,30 @@ public class ItemControllerIntegrationTest extends AbstractIntegrationTest{
     }
 
     @Test
-    @WithMockUser(roles = "USER")
+    @WithMockUser(roles = "ADMIN")
     void shouldDeleteItem() throws Exception {
         ItemResponseDto created = createItem("Mouse", BigDecimal.valueOf(50));
 
         mockMvc.perform(delete("/api/items/{id}", created.getId())
-                        .with(csrf()))
+                        .with(csrf())
+                        .with(withUserHeaders(1L, "ADMIN")))
                 .andExpect(status().isNoContent());
 
-        mockMvc.perform(get("/api/items/{id}", created.getId()))
+        mockMvc.perform(get("/api/items/{id}", created.getId())
+                        .with(withUserHeaders(1L, "ADMIN")))
                 .andExpect(status().isNotFound());
     }
 
     @Test
-    @WithMockUser(roles = "USER")
+    @WithMockUser(roles = "ADMIN")
     void shouldReturn404WhenItemNotFound() throws Exception {
-        mockMvc.perform(get("/api/items/{id}", 9999L))
+        mockMvc.perform(get("/api/items/{id}", 9999L)
+                        .with(withUserHeaders(1L, "ADMIN")))
                 .andExpect(status().isNotFound());
     }
 
     @Test
-    @WithMockUser(roles = "USER")
+    @WithMockUser(roles = "ADMIN")
     void shouldFailWhenCreateItemWithInvalidData() throws Exception {
         ItemCreateDto invalid = new ItemCreateDto();
         invalid.setName("");
@@ -125,13 +148,14 @@ public class ItemControllerIntegrationTest extends AbstractIntegrationTest{
 
         mockMvc.perform(post("/api/items")
                         .with(csrf())
+                        .with(withUserHeaders(1L, "ADMIN"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(invalid)))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
-    @WithMockUser(roles = "USER")
+    @WithMockUser(roles = "ADMIN")
     void shouldPartiallyUpdateItemIgnoringNullFields() throws Exception {
         ItemResponseDto created = createItem("Keyboard", BigDecimal.valueOf(120));
 
@@ -141,6 +165,7 @@ public class ItemControllerIntegrationTest extends AbstractIntegrationTest{
 
         mockMvc.perform(put("/api/items/{id}", created.getId())
                         .with(csrf())
+                        .with(withUserHeaders(1L, "ADMIN"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateDto)))
                 .andExpect(status().isOk())
@@ -149,7 +174,7 @@ public class ItemControllerIntegrationTest extends AbstractIntegrationTest{
     }
 
     @Test
-    @WithMockUser(roles = "USER")
+    @WithMockUser(roles = "ADMIN")
     void shouldUpdateOnlyPrice() throws Exception {
         ItemResponseDto created = createItem("Monitor", BigDecimal.valueOf(300));
 
@@ -158,6 +183,7 @@ public class ItemControllerIntegrationTest extends AbstractIntegrationTest{
 
         mockMvc.perform(put("/api/items/{id}", created.getId())
                         .with(csrf())
+                        .with(withUserHeaders(1L, "ADMIN"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateDto)))
                 .andExpect(status().isOk())
@@ -166,40 +192,39 @@ public class ItemControllerIntegrationTest extends AbstractIntegrationTest{
     }
 
     @Test
-    @WithMockUser(roles = "USER")
+    @WithMockUser(roles = "ADMIN")
     void shouldReturn404WhenUpdatingNonExistingItem() throws Exception {
-
         ItemUpdateDto updateDto = new ItemUpdateDto();
         updateDto.setName("Ghost Item");
 
         mockMvc.perform(put("/api/items/{id}", 9999L)
                         .with(csrf())
+                        .with(withUserHeaders(1L, "ADMIN"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateDto)))
                 .andExpect(status().isNotFound());
     }
 
     @Test
-    @WithMockUser(roles = "USER")
+    @WithMockUser(roles = "ADMIN")
     void shouldReturn404WhenDeletingNonExistingItem() throws Exception {
-
         mockMvc.perform(delete("/api/items/{id}", 9999L)
-                        .with(csrf()))
+                        .with(csrf())
+                        .with(withUserHeaders(1L, "ADMIN")))
                 .andExpect(status().isNotFound());
     }
 
     @Test
-    @WithMockUser(roles = "USER")
+    @WithMockUser(roles = "ADMIN")
     void shouldAllowZeroPrice() throws Exception {
-
         mockMvc.perform(post("/api/items")
                         .with(csrf())
+                        .with(withUserHeaders(1L, "ADMIN"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
                                 validItem("Free Sample", BigDecimal.ZERO))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.price").value(0));
     }
-
 }
 

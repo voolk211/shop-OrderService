@@ -14,12 +14,15 @@ import org.example.orderservice.repository.OrderItemRepository;
 import org.example.orderservice.repository.OrderRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.example.orderservice.model.entities.OrderStatus;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 import java.math.BigDecimal;
 
@@ -31,9 +34,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 
-
-
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
+@TestPropertySource(properties = {"internal.internal-secret=test-secret"})
 public class OrderControllerIntegrationTest extends AbstractIntegrationTest{
 
     @Autowired
@@ -51,6 +53,9 @@ public class OrderControllerIntegrationTest extends AbstractIntegrationTest{
     @Autowired
     private OrderItemRepository orderItemRepository;
 
+    @Value("${internal.internal-secret}")
+    private String internalSecret;
+
     @BeforeEach
     void cleanDatabase() {
         orderItemRepository.deleteAll();
@@ -64,6 +69,15 @@ public class OrderControllerIntegrationTest extends AbstractIntegrationTest{
                 wiremock.getMappedPort(8080)
         );
         WireMock.reset();
+    }
+
+    private RequestPostProcessor withUserHeaders(Long userId, String... roles) {
+        return request -> {
+            request.addHeader("X-User-Id", userId.toString());
+            request.addHeader("X-Roles", "ROLE_" + String.join(",ROLE_", roles));
+            request.addHeader("X-Internal-Auth", internalSecret);
+            return request;
+        };
     }
 
     private Item createItem(String name, BigDecimal price) {
@@ -81,7 +95,7 @@ public class OrderControllerIntegrationTest extends AbstractIntegrationTest{
     }
 
     protected void stubUser(Long userId) {
-        WireMock.stubFor(WireMock.get("/api/users/" + userId)
+        WireMock.stubFor(WireMock.get("/api/internal/users/" + userId)
                 .willReturn(WireMock.aResponse()
                         .withStatus(200)
                         .withHeader("Content-Type", "application/json")
@@ -108,6 +122,7 @@ public class OrderControllerIntegrationTest extends AbstractIntegrationTest{
 
         String response = mockMvc.perform(post("/api/orders")
                         .with(csrf())
+                        .with(withUserHeaders(userId, "ADMIN"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(validOrderCreateDto(userId))))
                 .andExpect(status().isCreated())
@@ -121,11 +136,11 @@ public class OrderControllerIntegrationTest extends AbstractIntegrationTest{
     @Test
     @WithMockUser(roles = "USER")
     void shouldCreateOrder() throws Exception {
-
         stubUser(1L);
 
         mockMvc.perform(post("/api/orders")
                         .with(csrf())
+                        .with(withUserHeaders(1L, "USER"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(validOrderCreateDto(1L))))
                 .andExpect(status().isCreated())
@@ -137,10 +152,10 @@ public class OrderControllerIntegrationTest extends AbstractIntegrationTest{
     @Test
     @WithMockUser(roles = "USER")
     void shouldGetOrderById() throws Exception {
-
         OrderWithUserResponseDto created = createOrder(2L);
 
-        mockMvc.perform(get("/api/orders/" + created.getOrder().getId()))
+        mockMvc.perform(get("/api/orders/" + created.getOrder().getId())
+                        .with(withUserHeaders(2L, "USER")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.order.id").value(created.getOrder().getId()))
                 .andExpect(jsonPath("$.user.id").value(2));
@@ -149,9 +164,7 @@ public class OrderControllerIntegrationTest extends AbstractIntegrationTest{
     @Test
     @WithMockUser(roles = "USER")
     void shouldUpdateOrder() throws Exception {
-
         OrderWithUserResponseDto created = createOrder(3L);
-
         stubUser(3L);
 
         OrderUpdateDto updateDto = new OrderUpdateDto();
@@ -159,6 +172,7 @@ public class OrderControllerIntegrationTest extends AbstractIntegrationTest{
 
         mockMvc.perform(put("/api/orders/" + created.getOrder().getId())
                         .with(csrf())
+                        .with(withUserHeaders(3L, "USER"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateDto)))
                 .andExpect(status().isOk())
@@ -168,12 +182,11 @@ public class OrderControllerIntegrationTest extends AbstractIntegrationTest{
     @Test
     @WithMockUser(roles = "USER")
     void shouldGetOrdersPage() throws Exception {
-
         createOrder(4L);
         createOrder(5L);
 
-
         mockMvc.perform(get("/api/orders")
+                        .with(withUserHeaders(4L, "ADMIN"))
                         .param("page", "0")
                         .param("size", "10"))
                 .andExpect(status().isOk())
@@ -183,26 +196,24 @@ public class OrderControllerIntegrationTest extends AbstractIntegrationTest{
     @Test
     @WithMockUser(roles = "USER")
     void shouldDeleteOrder() throws Exception {
-
         OrderWithUserResponseDto created = createOrder(6L);
 
         mockMvc.perform(delete("/api/orders/" + created.getOrder().getId())
-                        .with(csrf()))
+                        .with(csrf())
+                        .with(withUserHeaders(6L, "USER")))
                 .andExpect(status().isNoContent());
     }
 
     @Test
     @WithMockUser(roles = "USER")
     void shouldAddOrderItem() throws Exception {
-
         stubUser(10L);
-
         OrderWithUserResponseDto order = createOrder(10L);
-
         Item item = createItem("Laptop", new BigDecimal("1000"));
 
         mockMvc.perform(post("/api/orders/{orderId}/items", order.getOrder().getId())
                         .with(csrf())
+                        .with(withUserHeaders(10L, "USER"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
                                 validOrderItemCreateDto(item.getId(), 2))))
@@ -215,20 +226,20 @@ public class OrderControllerIntegrationTest extends AbstractIntegrationTest{
     @Test
     @WithMockUser(roles = "USER")
     void shouldGetOrderItems() throws Exception {
-
         stubUser(11L);
-
         OrderWithUserResponseDto order = createOrder(11L);
         Item item = createItem("Mouse", new BigDecimal("50"));
 
         mockMvc.perform(post("/api/orders/{orderId}/items", order.getOrder().getId())
                         .with(csrf())
+                        .with(withUserHeaders(11L, "USER"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
                                 validOrderItemCreateDto(item.getId(), 3))))
                 .andExpect(status().isCreated());
 
         mockMvc.perform(get("/api/orders/{orderId}/items", order.getOrder().getId())
+                        .with(withUserHeaders(11L, "USER"))
                         .param("page", "0")
                         .param("size", "10"))
                 .andExpect(status().isOk())
@@ -239,14 +250,13 @@ public class OrderControllerIntegrationTest extends AbstractIntegrationTest{
     @Test
     @WithMockUser(roles = "USER")
     void shouldDeleteOrderItem() throws Exception {
-
         stubUser(12L);
-
         OrderWithUserResponseDto order = createOrder(12L);
         Item item = createItem("Keyboard", new BigDecimal("150"));
 
         String response = mockMvc.perform(post("/api/orders/{orderId}/items", order.getOrder().getId())
                         .with(csrf())
+                        .with(withUserHeaders(12L, "USER"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
                                 validOrderItemCreateDto(item.getId(), 1))))
@@ -257,21 +267,22 @@ public class OrderControllerIntegrationTest extends AbstractIntegrationTest{
         OrderItemResponseDto orderItem =
                 objectMapper.readValue(response, OrderItemResponseDto.class);
 
-        mockMvc.perform(delete("/api/orders/{orderId}/items/{orderItemId}", order.getOrder().getId() ,orderItem.getId())
-                        .with(csrf()))
+        mockMvc.perform(delete("/api/orders/{orderId}/items/{orderItemId}",
+                        order.getOrder().getId(), orderItem.getId())
+                        .with(csrf())
+                        .with(withUserHeaders(12L, "USER")))
                 .andExpect(status().isNoContent());
     }
 
     @Test
     @WithMockUser(roles = "USER")
     void shouldReturn404WhenItemNotExists() throws Exception {
-
         stubUser(13L);
-
         OrderWithUserResponseDto order = createOrder(13L);
 
         mockMvc.perform(post("/api/orders/{orderId}/items", order.getOrder().getId())
                         .with(csrf())
+                        .with(withUserHeaders(13L, "USER"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
                                 validOrderItemCreateDto(999L, 1))))
@@ -281,9 +292,7 @@ public class OrderControllerIntegrationTest extends AbstractIntegrationTest{
     @Test
     @WithMockUser(roles = "USER")
     void shouldFailValidationWhenQuantityNegative() throws Exception {
-
         stubUser(14L);
-
         OrderWithUserResponseDto order = createOrder(14L);
         Item item = createItem("Monitor", new BigDecimal("300"));
 
@@ -293,6 +302,7 @@ public class OrderControllerIntegrationTest extends AbstractIntegrationTest{
 
         mockMvc.perform(post("/api/orders/{orderId}/items", order.getOrder().getId())
                         .with(csrf())
+                        .with(withUserHeaders(14L, "USER"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isBadRequest());
@@ -301,9 +311,7 @@ public class OrderControllerIntegrationTest extends AbstractIntegrationTest{
     @Test
     @WithMockUser(roles = "USER")
     void shouldRecalculateTotalPriceWhenItemsAdded() throws Exception {
-
         stubUser(20L);
-
         OrderWithUserResponseDto order = createOrder(20L);
 
         Item item1 = createItem("Phone", new BigDecimal("500"));
@@ -311,6 +319,7 @@ public class OrderControllerIntegrationTest extends AbstractIntegrationTest{
 
         mockMvc.perform(post("/api/orders/{id}/items", order.getOrder().getId())
                         .with(csrf())
+                        .with(withUserHeaders(20L, "USER"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
                                 validOrderItemCreateDto(item1.getId(), 2))))
@@ -318,6 +327,7 @@ public class OrderControllerIntegrationTest extends AbstractIntegrationTest{
 
         mockMvc.perform(post("/api/orders/{id}/items", order.getOrder().getId())
                         .with(csrf())
+                        .with(withUserHeaders(20L, "USER"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
                                 validOrderItemCreateDto(item2.getId(), 1))))
@@ -325,7 +335,8 @@ public class OrderControllerIntegrationTest extends AbstractIntegrationTest{
 
         stubUser(20L);
 
-        mockMvc.perform(get("/api/orders/" + order.getOrder().getId()))
+        mockMvc.perform(get("/api/orders/" + order.getOrder().getId())
+                        .with(withUserHeaders(20L, "USER")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.order.totalPrice").value(1100));
     }
@@ -333,23 +344,22 @@ public class OrderControllerIntegrationTest extends AbstractIntegrationTest{
     @Test
     @WithMockUser(roles = "USER")
     void shouldKeepPriceSnapshotWhenItemPriceChanges() throws Exception {
-
         stubUser(21L);
-
         OrderWithUserResponseDto order = createOrder(21L);
-
         Item item = createItem("Tablet", new BigDecimal("300"));
 
         mockMvc.perform(post("/api/orders/{id}/items", order.getOrder().getId())
-                        .with(csrf())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(
-                                validOrderItemCreateDto(item.getId(), 1))));
+                .with(csrf())
+                .with(withUserHeaders(21L, "USER"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(
+                        validOrderItemCreateDto(item.getId(), 1))));
 
         item.setPrice(new BigDecimal("999"));
         itemRepository.saveAndFlush(item);
 
-        mockMvc.perform(get("/api/orders/{id}/items", order.getOrder().getId()))
+        mockMvc.perform(get("/api/orders/{id}/items", order.getOrder().getId())
+                        .with(withUserHeaders(21L, "USER")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].priceAtPurchase").value(300));
     }
@@ -357,15 +367,13 @@ public class OrderControllerIntegrationTest extends AbstractIntegrationTest{
     @Test
     @WithMockUser(roles = "USER")
     void shouldUpdateTotalPriceWhenOrderItemDeleted() throws Exception {
-
         stubUser(22L);
-
         OrderWithUserResponseDto order = createOrder(22L);
-
         Item item = createItem("Camera", new BigDecimal("800"));
 
         String response = mockMvc.perform(post("/api/orders/{id}/items", order.getOrder().getId())
                         .with(csrf())
+                        .with(withUserHeaders(22L, "USER"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
                                 validOrderItemCreateDto(item.getId(), 2))))
@@ -376,13 +384,16 @@ public class OrderControllerIntegrationTest extends AbstractIntegrationTest{
         OrderItemResponseDto orderItem =
                 objectMapper.readValue(response, OrderItemResponseDto.class);
 
-        mockMvc.perform(delete("/api/orders/{orderId}/items/{orderItemId}", order.getOrder().getId() ,orderItem.getId())
-                        .with(csrf()))
+        mockMvc.perform(delete("/api/orders/{orderId}/items/{orderItemId}",
+                        order.getOrder().getId(), orderItem.getId())
+                        .with(csrf())
+                        .with(withUserHeaders(22L, "USER")))
                 .andExpect(status().isNoContent());
 
         stubUser(22L);
 
-        mockMvc.perform(get("/api/orders/" + order.getOrder().getId()))
+        mockMvc.perform(get("/api/orders/" + order.getOrder().getId())
+                        .with(withUserHeaders(22L, "USER")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.order.totalPrice").value(0));
     }
@@ -390,19 +401,19 @@ public class OrderControllerIntegrationTest extends AbstractIntegrationTest{
     @Test
     @WithMockUser(roles = "USER")
     void shouldReturn404WhenOrderNotFound() throws Exception {
-
-        mockMvc.perform(get("/api/orders/999999"))
+        mockMvc.perform(get("/api/orders/999999")
+                        .with(withUserHeaders(1L, "USER")))
                 .andExpect(status().isNotFound());
     }
 
     @Test
     @WithMockUser(roles = "USER")
     void shouldGetOrdersByUserId() throws Exception {
-
         createOrder(50L);
         createOrder(50L);
 
         mockMvc.perform(get("/api/orders")
+                        .with(withUserHeaders(50L, "USER"))
                         .param("page", "0")
                         .param("size", "10")
                         .param("userId", "50"))
@@ -414,8 +425,8 @@ public class OrderControllerIntegrationTest extends AbstractIntegrationTest{
     @Test
     @WithMockUser(roles = "USER")
     void shouldReturnEmptyPageWhenUserHasNoOrders() throws Exception {
-
         mockMvc.perform(get("/api/orders")
+                        .with(withUserHeaders(777L, "USER"))
                         .param("page", "0")
                         .param("size", "10")
                         .param("userId", "777"))
@@ -426,12 +437,12 @@ public class OrderControllerIntegrationTest extends AbstractIntegrationTest{
     @Test
     @WithMockUser(roles = "USER")
     void shouldSupportPaginationForUserOrders() throws Exception {
-
         for (int i = 0; i < 5; i++) {
             createOrder(60L);
         }
 
         mockMvc.perform(get("/api/orders")
+                        .with(withUserHeaders(60L, "USER"))
                         .param("page", "0")
                         .param("size", "3")
                         .param("userId", "60"))

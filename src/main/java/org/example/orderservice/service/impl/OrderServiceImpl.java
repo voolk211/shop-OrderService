@@ -67,7 +67,7 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional(readOnly = true)
-    public OrderWithUserResponseDto  getOrder(Long orderId) {
+    public OrderWithUserResponseDto getOrder(Long orderId) {
         Order order = getActiveOrderOrThrow(orderId);
 
         UserResponseDto user = userClient.getUserById(order.getUserId());
@@ -147,6 +147,13 @@ public class OrderServiceImpl implements OrderService {
 
         Order order = getActiveOrderOrThrow(orderId);
         order.removeOrderItem(orderItem);
+    }
+
+    @Transactional
+    @Override
+    public boolean isOwner(Long orderId, Long userId) {
+        Order order = getActiveOrderOrThrow(orderId);
+        return order.getUserId().equals(userId);
     }
 
     private Order getActiveOrderOrThrow(Long id) {

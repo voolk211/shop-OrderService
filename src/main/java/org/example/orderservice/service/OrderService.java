@@ -32,4 +32,6 @@ public interface OrderService {
     void deleteOrderItem(Long orderId, Long orderItemId);
 
     void deleteOrder(Long id);
+
+    boolean isOwner(Long orderId, Long userId);
 }

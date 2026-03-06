@@ -36,7 +36,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.times;
 
 @ExtendWith(MockitoExtension.class)
 public class OrderServiceTest {
@@ -473,8 +475,55 @@ public class OrderServiceTest {
                 orderService.getOrders(pageable, null, null, null, null);
 
         assertThat(result.getContent()).hasSize(1);
-        assertThat(result.getContent().get(0).getOrder().getStatus())
+        assertThat(result.getContent().getFirst().getOrder().getStatus())
                 .isEqualTo(OrderStatus.SHIPPED);
+    }
+
+    @Test
+    void isOwner_WhenUserIsOwner_ShouldReturnTrue() {
+        Long orderId = 1L;
+        Long userId = 10L;
+
+        Order order = new Order();
+        order.setId(orderId);
+        order.setUserId(userId);
+
+        when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
+
+        boolean result = orderService.isOwner(orderId, userId);
+
+        assertThat(result).isTrue();
+    }
+
+    @Test
+    void isOwner_WhenUserIsNotOwner_ShouldReturnFalse() {
+        Long orderId = 1L;
+        Long userId = 10L;
+
+        Order order = new Order();
+        order.setId(orderId);
+        order.setUserId(99L);
+
+        when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
+
+        boolean result = orderService.isOwner(orderId, userId);
+
+        assertThat(result).isFalse();
+        verify(orderRepository).findById(orderId);
+    }
+
+    @Test
+    void isOwner_WhenOrderDoesNotExist_ShouldThrowException() {
+        Long orderId = 1L;
+        Long userId = 10L;
+
+        when(orderRepository.findById(orderId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> orderService.isOwner(orderId, userId))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessage("Order not found");
+
+        verify(orderRepository).findById(orderId);
     }
 
 }

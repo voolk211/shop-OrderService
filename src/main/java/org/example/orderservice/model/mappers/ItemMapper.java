@@ -1,6 +1,8 @@
 package org.example.orderservice.model.mappers;
 
-import org.example.orderservice.model.dto.*;
+import org.example.orderservice.model.dto.ItemCreateDto;
+import org.example.orderservice.model.dto.ItemResponseDto;
+import org.example.orderservice.model.dto.ItemUpdateDto;
 import org.example.orderservice.model.entities.Item;
 import org.mapstruct.Mapper;
 import org.mapstruct.MappingTarget;

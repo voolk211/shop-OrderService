@@ -51,7 +51,6 @@ class ItemServiceTest {
         verify(itemRepository).save(item);
     }
 
-
     @Test
     void updateItem_WhenItemDoesNotExist_ThrowsResourceNotFoundException() {
         Long id = 10L;
