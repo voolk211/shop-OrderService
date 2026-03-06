@@ -3,18 +3,22 @@ package org.example.orderservice.integration;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.client.WireMock;
 
-import org.example.orderservice.model.dto.OrderCreateDto;
+import org.example.orderservice.client.UserClient;
+import org.example.orderservice.model.dto.UserResponseDto;
 import org.example.orderservice.model.dto.OrderItemCreateDto;
-import org.example.orderservice.model.dto.OrderItemResponseDto;
-import org.example.orderservice.model.dto.OrderUpdateDto;
 import org.example.orderservice.model.dto.OrderWithUserResponseDto;
+import org.example.orderservice.model.dto.OrderUpdateDto;
+import org.example.orderservice.model.dto.OrderCreateDto;
+import org.example.orderservice.model.dto.OrderItemResponseDto;
 import org.example.orderservice.model.entities.Item;
 import org.example.orderservice.repository.ItemRepository;
 import org.example.orderservice.repository.OrderItemRepository;
 import org.example.orderservice.repository.OrderRepository;
 import org.junit.jupiter.api.BeforeEach;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
@@ -55,6 +59,9 @@ public class OrderControllerIntegrationTest extends AbstractIntegrationTest{
 
     @Autowired
     private OrderItemRepository orderItemRepository;
+
+    @MockBean
+    private UserClient userClient;
 
     @Value("${internal.internal-secret}")
     private String internalSecret;
@@ -141,6 +148,9 @@ public class OrderControllerIntegrationTest extends AbstractIntegrationTest{
     void shouldCreateOrder() throws Exception {
         stubUser(1L);
 
+        UserResponseDto mockUser = new UserResponseDto();
+        mockUser.setEmail("john@test.com");
+        Mockito.when(userClient.getUserById(1L)).thenReturn(mockUser);
         mockMvc.perform(post("/api/orders")
                         .with(csrf())
                         .with(withUserHeaders(1L, "USER"))
@@ -156,7 +166,9 @@ public class OrderControllerIntegrationTest extends AbstractIntegrationTest{
     @WithMockUser(roles = "USER")
     void shouldGetOrderById() throws Exception {
         OrderWithUserResponseDto created = createOrder(2L);
-
+        UserResponseDto mockUser = new UserResponseDto();
+        mockUser.setId(2L);
+        Mockito.when(userClient.getUserById(2L)).thenReturn(mockUser);
         mockMvc.perform(get("/api/orders/" + created.getOrder().getId())
                         .with(withUserHeaders(2L, "USER")))
                 .andExpect(status().isOk())
