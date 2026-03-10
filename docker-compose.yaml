@@ -1,0 +1,31 @@
+version: "3.9"
+
+services:
+  order-service:
+    env_file:
+      - .env
+    build: .
+    container_name: orderService
+    depends_on:
+      - order_db
+    ports:
+      - '8083:8080'
+    environment:
+      - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME}
+      - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD}
+      - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL}
+      - SPRING_PROFILES_ACTIVE=docker
+  order_db:
+    image: postgres:16
+    container_name: orderServicePostgres
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

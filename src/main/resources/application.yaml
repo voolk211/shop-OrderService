@@ -1,0 +1,22 @@
+spring:
+  config:
+    import: optional:file:.env[.properties]
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: ${DATASOURCE_URL}
+    username: ${DATASOURCE_USERNAME}
+    password: ${DATASOURCE_PASSWORD}
+  liquibase:
+    enabled: true
+    change-log: classpath:liquibase/db.changelog.yaml
+user:
+  service:
+    url: ${USER_SERVICE_URL}
+resilience4j:
+  circuitbreaker:
+    instances:
+      user-service:
+        sliding-window-size: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state:
+          seconds: 10
