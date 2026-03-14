@@ -15,6 +15,7 @@ services:
       - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD}
       - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL}
       - SPRING_PROFILES_ACTIVE=docker
+      - ORDER_SERVICE_PORT=8080
   order_db:
     image: postgres:16
     container_name: orderServicePostgres

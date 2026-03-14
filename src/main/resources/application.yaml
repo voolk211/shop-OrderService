@@ -6,9 +6,38 @@ spring:
   liquibase:
     enabled: true
     change-log: classpath:liquibase/db.changelog.yaml
+  cloud:
+    openfeign:
+      client:
+        config:
+          user-service:
+            connect-timeout: 3000
+            read-timeout: 5000
+      circuitbreaker:
+        enabled: true
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: order-service
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "com.shop.orderservice.model.events"
+    listener:
+      ack-mode: record
+    retry:
+      topic:
+        enabled: true
+        attempts: 3
+        delay: 1000
+    topics:
+      payment-events: payment-events
+
 user:
   service:
     url: ${USER_SERVICE_URL}
+
 resilience4j:
   circuitbreaker:
     instances:
@@ -17,6 +46,7 @@ resilience4j:
         failure-rate-threshold: 50
         wait-duration-in-open-state:
           seconds: 10
+
 internal:
   service-secret: ${SERVICE_SECRET}
   internal-secret: ${INTERNAL_SECRET}
