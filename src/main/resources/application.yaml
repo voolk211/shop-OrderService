@@ -17,6 +17,11 @@ spring:
         enabled: true
   kafka:
     bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        spring.json.add.type.headers: false
     consumer:
       group-id: order-service
       auto-offset-reset: earliest
@@ -26,13 +31,9 @@ spring:
         spring.json.trusted.packages: "com.shop.orderservice.model.events"
     listener:
       ack-mode: record
-    retry:
-      topic:
-        enabled: true
-        attempts: 3
-        delay: 1000
     topics:
       payment-events: payment-events
+      payment-events-dlq: payment-events-dlq
 
 user:
   service:
