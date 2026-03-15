@@ -1,6 +1,5 @@
 package com.shop.orderservice.service.kafka;
 
-
 import com.shop.orderservice.exception.ResourceNotFoundException;
 import com.shop.orderservice.exception.TransitionException;
 import com.shop.orderservice.model.events.PaymentEvent;

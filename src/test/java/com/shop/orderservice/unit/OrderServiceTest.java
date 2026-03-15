@@ -1,8 +1,8 @@
 package com.shop.orderservice.unit;
 
-
 import com.shop.orderservice.client.UserClient;
 import com.shop.orderservice.exception.ResourceNotFoundException;
+import com.shop.orderservice.exception.TransitionException;
 import com.shop.orderservice.model.dto.OrderItemCreateDto;
 import com.shop.orderservice.model.dto.OrderResponseDto;
 import com.shop.orderservice.model.dto.OrderUpdateDto;
@@ -39,6 +39,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.never;
 
 @ExtendWith(MockitoExtension.class)
 public class OrderServiceTest {
@@ -524,6 +525,51 @@ public class OrderServiceTest {
                 .hasMessage("Order not found");
 
         verify(orderRepository).findById(orderId);
+    }
+
+    @Test
+    void updateOrder_WhenInvalidStatusTransition_ShouldThrowTransitionException() {
+        Long orderId = 1L;
+
+        Order currentOrder = new Order();
+        currentOrder.setId(orderId);
+        currentOrder.setStatus(OrderStatus.SHIPPED);
+
+        OrderUpdateDto updateDto = new OrderUpdateDto();
+        updateDto.setStatus(OrderStatus.PENDING);
+
+        when(orderRepository.findById(orderId)).thenReturn(Optional.of(currentOrder));
+
+        assertThatThrownBy(() -> orderService.updateOrder(orderId, updateDto))
+                .isInstanceOf(TransitionException.class);
+
+        verify(orderMapper, never()).updateOrderFromDto(any(), any());
+    }
+
+    @Test
+    void updateOrder_WhenStatusIsNull_ShouldUpdateOtherFieldsWithoutTransitionCheck() {
+        Long orderId = 1L;
+
+        Order currentOrder = new Order();
+        currentOrder.setId(orderId);
+        currentOrder.setUserId(1L);
+        currentOrder.setStatus(OrderStatus.PENDING);
+
+        OrderUpdateDto updateDto = new OrderUpdateDto();
+        updateDto.setStatus(null);
+        updateDto.setUserId(2L);
+
+        UserResponseDto userDto = new UserResponseDto();
+        OrderResponseDto orderDto = new OrderResponseDto();
+
+        when(orderRepository.findById(orderId)).thenReturn(Optional.of(currentOrder));
+        when(userClient.getUserById(any())).thenReturn(userDto);
+        when(orderMapper.toDto(currentOrder)).thenReturn(orderDto);
+
+        OrderWithUserResponseDto result = orderService.updateOrder(orderId, updateDto);
+
+        assertThat(result).isNotNull();
+        verify(orderMapper).updateOrderFromDto(updateDto, currentOrder);
     }
 
 }
