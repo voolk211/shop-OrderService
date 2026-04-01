@@ -184,7 +184,7 @@ public class OrderControllerIntegrationTest extends AbstractIntegrationTest{
         stubUser(3L);
 
         OrderUpdateDto updateDto = new OrderUpdateDto();
-        updateDto.setStatus(OrderStatus.COMPLETED);
+        updateDto.setStatus(OrderStatus.PAID);
 
         mockMvc.perform(put("/api/orders/" + created.getOrder().getId())
                         .with(csrf())
@@ -192,7 +192,7 @@ public class OrderControllerIntegrationTest extends AbstractIntegrationTest{
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateDto)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.order.status").value("COMPLETED"));
+                .andExpect(jsonPath("$.order.status").value("PAID"));
     }
 
     @Test

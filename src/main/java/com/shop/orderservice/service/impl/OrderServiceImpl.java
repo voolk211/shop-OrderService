@@ -1,5 +1,6 @@
 package com.shop.orderservice.service.impl;
 
+import com.shop.orderservice.exception.TransitionException;
 import lombok.RequiredArgsConstructor;
 import com.shop.orderservice.client.UserClient;
 import com.shop.orderservice.exception.ResourceNotFoundException;
@@ -54,6 +55,15 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     public OrderWithUserResponseDto updateOrder(Long orderId, OrderUpdateDto orderUpdateDto) {
         Order currentOrder = getOrderOrThrow(orderId);
+
+        if (orderUpdateDto.getStatus() != null &&
+                !currentOrder.getStatus().canTransitionTo(orderUpdateDto.getStatus())) {
+            throw new TransitionException(
+                    String.format("Cannot transition order from %s to %s",
+                            currentOrder.getStatus(), orderUpdateDto.getStatus())
+            );
+        }
+
         orderMapper.updateOrderFromDto(orderUpdateDto, currentOrder);
 
         UserResponseDto user = userClient.getUserById(currentOrder.getUserId());
