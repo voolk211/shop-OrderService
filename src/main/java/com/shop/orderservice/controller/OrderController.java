@@ -54,7 +54,7 @@ public class OrderController {
         return ResponseEntity.ok(orderItemMapper.toDto(orderItems));
     }
 
-    @PreAuthorize("hasRole('ADMIN') or (#userId != null and #userId == authentication.principal)")
+    @PreAuthorize("hasRole('ADMIN') or (#userId != null and #userId.equals(authentication.principal))")
     @GetMapping
     public ResponseEntity<Page<OrderWithUserResponseDto>> getOrders(
             @RequestParam(required = false) Long userId,
@@ -66,7 +66,7 @@ public class OrderController {
         return ResponseEntity.ok(orders);
     }
 
-    @PreAuthorize("hasRole('ADMIN') or #orderCreateDto.userId == authentication.principal")
+    @PreAuthorize("hasRole('ADMIN') or (#orderCreateDto.userId != null and #orderCreateDto.userId.equals(authentication.principal))")
     @PostMapping
     public ResponseEntity<OrderWithUserResponseDto> createOrder(@Valid @RequestBody OrderCreateDto orderCreateDto) {
         OrderWithUserResponseDto orderWithUserResponseDto = orderService.createOrder(orderMapper.toEntity(orderCreateDto));
